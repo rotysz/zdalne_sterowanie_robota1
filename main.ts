@@ -6,6 +6,7 @@ const CMD_STOP = "stop"
 const CMD_SETSPEED = "predkosc"
 const CMD_SETSPEEDL = "p_prawy"
 const CMD_SETSPEEDR = "p_lewy"
+const CMD_CHGMTRSPEED = "zmienszybk"
 const CMD_CHGGROUP = "grupa"
 
 const ON = true
@@ -88,6 +89,18 @@ function CmdSetSpeedR(SpeedVal: number) {
     SpeedRight = SpeedVal
 }
 
+function CmdChangeMotorSpeed(EncodedValue:number){
+    
+    let TmpSpeedL = ((EncodedValue / 512) - ((EncodedValue / 512) % 1)) - 256
+    let TmpSpeedR = EncodedValue%512 -256
+    if (MotorOffTime != 0){
+         MotorLeft(TmpSpeedL)
+         MotorRight(TmpSpeedR)
+    }
+    SpeedLeft  = TmpSpeedL
+    SpeedRight = TmpSpeedR     
+}
+
 function CmdChangeRadioGroup(On: boolean, NewRadioGroup: number) {
     if (On) {
         RGrpEndTime = input.runningTime() + 60000
@@ -107,6 +120,7 @@ radio.onReceivedValue(function (Cmd: string, CmdValue: number) {
     if (Cmd == CMD_FWD) CmdForward(ON, CmdValue, SpeedLeft, SpeedRight)
     if (Cmd == CMD_LEFT) CmdLeft(CmdValue)
     if (Cmd == CMD_RIGHT) CmdRight(CmdValue)
+    if (Cmd ==CMD_CHGMTRSPEED) CmdChangeMotorSpeed(CmdValue)
     if (Cmd == CMD_STOP) CmdStop()
     if (Cmd == CMD_CHGGROUP) CmdChangeRadioGroup(ON, CmdValue)
 
