@@ -1,5 +1,6 @@
 const CMD_EMPTY = "empty"
 const CMD_FWD = "do_przodu"
+const CMD_RUN ="ruszaj"
 const CMD_LEFT = "w_lewo"
 const CMD_RIGHT = "w_prawo"
 const CMD_STOP = "stop"
@@ -26,24 +27,13 @@ let RGrpEndTime: number = 0
 
 radio.setGroup(INIT_GROUP)
 
-function MotorLeft(SpeedVal: number) {
-    if (SpeedVal >= 0) maqueen.MotorRun(maqueen.aMotors.M1, maqueen.Dir.CW, SpeedVal)
-    else maqueen.MotorRun(maqueen.aMotors.M1, maqueen.Dir.CCW, -SpeedVal)
+
+function DecodeP1 (EncodedValue:number): number{
+    return EncodedValue % 512 -256 
 }
 
-function MotorRight(SpeedVal: number) {
-    if (SpeedVal >= 0) maqueen.MotorRun(maqueen.aMotors.M2, maqueen.Dir.CW, SpeedVal)
-    else maqueen.MotorRun(maqueen.aMotors.M2, maqueen.Dir.CCW, -SpeedVal)
-}
-
-function GetDistance(): number {
-    return maqueen.sensor(PingUnit.Centimeters);
-}
-
-function LineSensorStatus(): number {
-    let Line1Sensor = maqueen.readPatrol(maqueen.Patrol.PatrolLeft)
-    let Line2Sensor = maqueen.readPatrol(maqueen.Patrol.PatrolRight)
-    return Line1Sensor + Line2Sensor * 10
+function DecodeP2(EncodedValue: number): number {
+    return Math.trunc(EncodedValue/512) - 256
 }
 
 function CmdForward(On: boolean, Duration: number, SpeedL: number, SpeedR: number) {
@@ -51,14 +41,19 @@ function CmdForward(On: boolean, Duration: number, SpeedL: number, SpeedR: numbe
         LastCmd = CMD_FWD
         LastCmdTime = input.runningTime()
         MotorOffTime = LastCmdTime + Duration
-        MotorLeft(SpeedL)
-        MotorRight(SpeedR)
+        RobotImp.MotorLeft(SpeedL)
+        RobotImp.MotorRight(SpeedR)
 
     } else {
-        MotorLeft(SpeedL)
-        MotorRight(SpeedR)
+        RobotImp.MotorLeft(SpeedL)
+        RobotImp.MotorRight(SpeedR)
         MotorOffTime = 0
     }
+}
+
+function CmdRun(On: boolean, Speed:number, Duration:number) {
+    CmdSetSpeed(Speed)
+    CmdForward(On, Duration, Speed, Speed)
 }
 
 function CmdLeft(Duriation: number) {
@@ -89,16 +84,16 @@ function CmdSetSpeedR(SpeedVal: number) {
     SpeedRight = SpeedVal
 }
 
-function CmdChangeMotorSpeed(EncodedValue:number){
-    
+function CmdChangeMotorSpeed(EncodedValue: number) {
+
     let TmpSpeedL = ((EncodedValue / 512) - ((EncodedValue / 512) % 1)) - 256
-    let TmpSpeedR = EncodedValue%512 -256
-    if (MotorOffTime != 0){
-         MotorLeft(TmpSpeedL)
-         MotorRight(TmpSpeedR)
+    let TmpSpeedR = EncodedValue % 512 - 256
+    if (MotorOffTime != 0) {
+        RobotImp.MotorLeft(TmpSpeedL)
+        RobotImp.MotorRight(TmpSpeedR)
     }
-    SpeedLeft  = TmpSpeedL
-    SpeedRight = TmpSpeedR     
+    SpeedLeft = TmpSpeedL
+    SpeedRight = TmpSpeedR
 }
 
 function CmdChangeRadioGroup(On: boolean, NewRadioGroup: number) {
@@ -118,9 +113,10 @@ radio.onReceivedValue(function (Cmd: string, CmdValue: number) {
     if (Cmd == CMD_SETSPEEDL) CmdSetSpeedL(CmdValue)
     if (Cmd == CMD_SETSPEEDR) CmdSetSpeedR(CmdValue)
     if (Cmd == CMD_FWD) CmdForward(ON, CmdValue, SpeedLeft, SpeedRight)
+    if (Cmd == CMD_RUN) CmdRun(ON, DecodeP1(CmdValue),DecodeP2(CmdValue))
     if (Cmd == CMD_LEFT) CmdLeft(CmdValue)
     if (Cmd == CMD_RIGHT) CmdRight(CmdValue)
-    if (Cmd ==CMD_CHGMTRSPEED) CmdChangeMotorSpeed(CmdValue)
+    if (Cmd == CMD_CHGMTRSPEED) CmdChangeMotorSpeed(CmdValue)
     if (Cmd == CMD_STOP) CmdStop()
     if (Cmd == CMD_CHGGROUP) CmdChangeRadioGroup(ON, CmdValue)
 
@@ -138,7 +134,8 @@ basic.forever(function () {
             CmdChangeRadioGroup(OFF, INIT_GROUP)
         }
     }
-    radio.sendValue(MSG_DIST, GetDistance())
-    radio.sendValue(MSG_LINESENSORS, LineSensorStatus())
+
+    radio.sendValue(MSG_DIST, RobotImp.GetDistance())
+    radio.sendValue(MSG_LINESENSORS, RobotImp.LineSensorStatus())
     basic.pause(10)
 })
