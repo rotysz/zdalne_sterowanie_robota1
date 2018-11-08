@@ -6,21 +6,30 @@
 
 namespace RobotImp {
     export function MotorLeft(SpeedVal: number) {
-        if (SpeedVal >= 0) maqueen.MotorRun(maqueen.aMotors.M1, maqueen.Dir.CW, SpeedVal)
-        else maqueen.MotorRun(maqueen.aMotors.M1, maqueen.Dir.CCW, -SpeedVal)
+        AlphaBot2.MotorRun(Motors.M1, SpeedVal)
     }
 
     export function MotorRight(SpeedVal: number) {
-        if (SpeedVal >= 0) maqueen.MotorRun(maqueen.aMotors.M2, maqueen.Dir.CW, SpeedVal)
-        else maqueen.MotorRun(maqueen.aMotors.M2, maqueen.Dir.CCW, -SpeedVal)
+        AlphaBot2.MotorRun(Motors.M2, SpeedVal)
+
     }
 
     export function GetDistance(): number {
-        return maqueen.sensor(PingUnit.Centimeters);
+        return AlphaBot2.Ultrasonic()
     }
+
     export function LineSensorStatus(): number {
-        let Line1Sensor = maqueen.readPatrol(maqueen.Patrol.PatrolLeft)
-        let Line2Sensor = maqueen.readPatrol(maqueen.Patrol.PatrolRight)
-        return Line1Sensor + Line2Sensor * 10
+        let sensor_values = AlphaBot2.readCalibrated();
+        let i = 0
+        let Multiplier = 1
+        let LineSensor = 0
+        for (i = 0; i < 5; i++) {
+            let value = sensor_values[i];
+            if (value > 500) LineSensor = LineSensor + Multiplier
+            Multiplier = Multiplier * 10
+        }
+        return LineSensor
     }
 }
+
+
